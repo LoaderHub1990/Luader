@@ -105,12 +105,24 @@
             margin-top: 4px;
         }
 
-        /* Server Card */
+        /* Server Cards Grid */
+        .servers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+            margin-bottom: 30px;
+        }
         .server-card {
             background: #16213e;
             border-radius: 12px;
             padding: 20px;
-            max-width: 400px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid transparent;
+        }
+        .server-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            border-color: #2a2a4a;
         }
         .server-card .top {
             display: flex;
@@ -131,6 +143,7 @@
         }
         .status-badge.online { background: #00ff8833; color: #00ff88; }
         .status-badge.offline { background: #ff444433; color: #ff4444; }
+        .status-badge.error { background: #ff880033; color: #ff8800; }
         .server-card .info {
             display: flex;
             gap: 18px;
@@ -138,6 +151,7 @@
             color: #778899;
             margin: 12px 0;
         }
+        .server-card .info span { display: flex; align-items: center; gap: 5px; }
         .server-card .actions {
             display: flex;
             gap: 8px;
@@ -209,37 +223,25 @@
         <!-- Stats -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="number" id="statGuilds">0</div>
-                <div class="label">📁 เซิร์ฟเวอร์</div>
+                <div class="number" id="statTotal">0</div>
+                <div class="label">🤖 จำนวนบอท</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="statOnline">0</div>
+                <div class="label">🟢 ออนไลน์</div>
             </div>
             <div class="stat-card">
                 <div class="number" id="statCommands">0</div>
-                <div class="label">📝 คำสั่งที่ใช้</div>
-            </div>
-            <div class="stat-card">
-                <div class="number" id="statStatus">❌</div>
-                <div class="label">🟢 สถานะ</div>
+                <div class="label">📝 คำสั่งทั้งหมด</div>
             </div>
         </div>
 
-        <!-- Bot Card -->
+        <!-- Bot Cards -->
         <h3 style="margin-bottom:15px;color:#8899aa;font-size:15px;">
-            <i class="bi bi-robot" style="color:#9466ff;"></i> บอทของฉัน
+            <i class="bi bi-robot" style="color:#9466ff;"></i> บอททั้งหมด
         </h3>
-        <div class="server-card" id="botCard">
-            <div class="top">
-                <span class="name"><i class="bi bi-robot"></i> <span id="botName">บอทหลัก</span></span>
-                <span class="status-badge" id="botStatusBadge">🔴 ออฟไลน์</span>
-            </div>
-            <div class="info">
-                <span><i class="bi bi-tag-fill"></i> <span id="botTag">ไม่ได้ออนไลน์</span></span>
-                <span><i class="bi bi-command"></i> <span id="botCommands">0</span></span>
-                <span><i class="bi bi-server"></i> <span id="botGuilds">0</span></span>
-            </div>
-            <div class="actions">
-                <button class="btn-start" id="btnStart" onclick="controlBot('start')">▶ เริ่มบอท</button>
-                <button class="btn-stop" id="btnStop" onclick="controlBot('stop')">⏹ หยุดบอท</button>
-            </div>
+        <div class="servers-grid" id="botGrid">
+            <!-- JavaScript จะสร้างการ์ดบอททั้งหมด -->
         </div>
 
         <!-- Logs -->
@@ -251,7 +253,7 @@
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <script>
         const socket = io();
-        let botStatus = {};
+        let bots = {};
 
         function addLog(msg) {
             const container = document.getElementById('logContainer');
@@ -263,40 +265,82 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        socket.on('botStatus', (data) => {
-            botStatus = data;
-            
-            document.getElementById('statGuilds').textContent = data.guilds || 0;
-            document.getElementById('statCommands').textContent = data.commands || 0;
-            document.getElementById('statStatus').textContent = data.running ? '✅' : '❌';
-            
-            document.getElementById('botTag').textContent = data.tag || 'ไม่ได้ออนไลน์';
-            document.getElementById('botCommands').textContent = data.commands || 0;
-            document.getElementById('botGuilds').textContent = data.guilds || 0;
+        function renderBots() {
+            const grid = document.getElementById('botGrid');
+            const ids = Object.keys(bots);
 
-            const badge = document.getElementById('botStatusBadge');
-            if (data.running) {
-                badge.className = 'status-badge online';
-                badge.textContent = '🟢 ออนไลน์';
-                document.getElementById('statusBadge').className = 'badge online';
-                document.getElementById('statusBadge').textContent = `🟢 ออนไลน์ (${data.tag})`;
-            } else {
-                badge.className = 'status-badge offline';
-                badge.textContent = '🔴 ออฟไลน์';
-                document.getElementById('statusBadge').className = 'badge offline';
-                document.getElementById('statusBadge').textContent = '🔴 ออฟไลน์';
+            if (ids.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column:1/-1;text-align:center;color:#556677;padding:40px;">
+                        <i class="bi bi-inbox" style="font-size:40px;display:block;margin-bottom:10px;"></i>
+                        ยังไม่มีบอท<br>
+                        <span style="font-size:13px;">เพิ่ม Token ใน .env (TOKENS=token1,token2,...)</span>
+                    </div>
+                `;
+                return;
             }
+
+            grid.innerHTML = ids.map(id => {
+                const bot = bots[id];
+                return `
+                    <div class="server-card">
+                        <div class="top">
+                            <span class="name"><i class="bi bi-robot"></i> บอท #${id}</span>
+                            <span class="status-badge ${bot.status}">
+                                ${bot.status === 'online' ? '🟢 ออนไลน์' : 
+                                  bot.status === 'error' ? '🟠 Error' : 
+                                  '🔴 ออฟไลน์'}
+                            </span>
+                        </div>
+                        <div class="info">
+                            <span><i class="bi bi-tag-fill"></i> ${bot.tag || 'ไม่ทราบ'}</span>
+                            <span><i class="bi bi-command"></i> ${bot.commands || 0}</span>
+                            <span><i class="bi bi-server"></i> ${bot.guilds || 0}</span>
+                        </div>
+                        <div class="actions">
+                            <button class="btn-start" onclick="controlBot('${id}', 'start')">▶ เริ่ม</button>
+                            <button class="btn-stop" onclick="controlBot('${id}', 'stop')">⏹ หยุด</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateStats() {
+            const ids = Object.keys(bots);
+            const total = ids.length;
+            const online = ids.filter(id => bots[id].status === 'online').length;
+            const commands = ids.reduce((sum, id) => sum + (bots[id].commands || 0), 0);
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statOnline').textContent = online;
+            document.getElementById('statCommands').textContent = commands;
+
+            const badge = document.getElementById('statusBadge');
+            if (online > 0) {
+                badge.className = 'badge online';
+                badge.textContent = `🟢 ออนไลน์ ${online}/${total} ตัว`;
+            } else {
+                badge.className = 'badge offline';
+                badge.textContent = `🔴 ออฟไลน์ ${total} ตัว`;
+            }
+        }
+
+        socket.on('botStatus', (data) => {
+            bots = data;
+            renderBots();
+            updateStats();
         });
 
-        async function controlBot(action) {
-            const url = action === 'start' ? '/api/bot/start' : '/api/bot/stop';
-            const msg = action === 'start' ? '▶ กำลังเริ่มบอท...' : '⏹ กำลังหยุดบอท...';
+        async function controlBot(id, action) {
+            const url = `/api/bot/${id}/${action}`;
+            const msg = action === 'start' ? `▶ กำลังเริ่มบอท #${id}...` : `⏹ กำลังหยุดบอท #${id}...`;
             addLog(`🔄 ${msg}`);
             
             try {
                 const res = await fetch(url, { method: 'POST' });
                 const data = await res.json();
-                addLog(`✅ ${action} บอท: ${data.status}`);
+                addLog(`✅ ${action} บอท #${id}: ${data.status}`);
             } catch (err) {
                 addLog(`❌ Error: ${err.message}`);
             }
@@ -306,9 +350,10 @@
         fetch('/api/status')
             .then(res => res.json())
             .then(data => {
-                botStatus = data;
-                socket.emit('botStatus', data);
-                addLog('✅ โหลดสถานะสำเร็จ');
+                bots = data;
+                renderBots();
+                updateStats();
+                addLog(`✅ โหลดสถานะสำเร็จ (${Object.keys(bots).length} บอท)`);
             })
             .catch(err => addLog(`❌ โหลดสถานะล้มเหลว: ${err.message}`));
     </script>
