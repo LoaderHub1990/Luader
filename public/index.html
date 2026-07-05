@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Bot Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0c090a;
+            color: #c8d2dd;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 220px;
+            background: #0a0809;
+            padding: 20px 12px;
+            border-right: 1px solid #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar .logo {
+            font-size: 22px;
+            font-weight: 700;
+            color: #9466ff;
+            margin-bottom: 30px;
+            padding-left: 10px;
+        }
+        .sidebar .logo i { font-size: 28px; margin-right: 10px; }
+        .sidebar-item {
+            padding: 12px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            color: #8899aa;
+        }
+        .sidebar-item:hover { background: #1a1a1a; color: #c8d2dd; }
+        .sidebar-item.active {
+            background: #1a1a1a;
+            color: #9466ff;
+            border-left: 3px solid #9466ff;
+        }
+        .sidebar-item i { font-size: 20px; width: 24px; }
+
+        /* Main */
+        .main {
+            flex: 1;
+            padding: 30px 35px;
+            overflow-y: auto;
+            background: #0f0c0d;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+        }
+        .header h1 i { color: #9466ff; margin-right: 10px; }
+
+        .badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .badge.online { background: #00ff8833; color: #00ff88; }
+        .badge.offline { background: #ff444433; color: #ff4444; }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 18px 20px;
+            text-align: center;
+        }
+        .stat-card .number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #9466ff;
+        }
+        .stat-card .label {
+            font-size: 13px;
+            color: #8899aa;
+            margin-top: 4px;
+        }
+
+        /* Server Card */
+        .server-card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 400px;
+        }
+        .server-card .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .server-card .name {
+            font-size: 17px;
+            font-weight: 600;
+        }
+        .server-card .name i { color: #9466ff; margin-right: 8px; }
+        .server-card .status-badge {
+            font-size: 11px;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .status-badge.online { background: #00ff8833; color: #00ff88; }
+        .status-badge.offline { background: #ff444433; color: #ff4444; }
+        .server-card .info {
+            display: flex;
+            gap: 18px;
+            font-size: 13px;
+            color: #778899;
+            margin: 12px 0;
+        }
+        .server-card .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+        }
+        .server-card .actions button {
+            flex: 1;
+            padding: 8px 0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .server-card .actions button:hover { opacity: 0.8; }
+        .btn-start { background: #00ff88; color: #0c090a; }
+        .btn-stop { background: #ff4444; color: #fff; }
+
+        /* Logs */
+        .log-container {
+            background: #0a0809;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+        .log-container .log-line {
+            padding: 3px 0;
+            border-bottom: 1px solid #0d0d0d;
+            color: #8899aa;
+        }
+        .log-container .log-line .time {
+            color: #556677;
+            margin-right: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="logo"><i class="bi bi-cpu"></i>Bot Panel</div>
+        <div class="sidebar-item active">
+            <i class="bi bi-grid-1x2-fill"></i> Dashboard
+        </div>
+        <div class="sidebar-item">
+            <i class="bi bi-box-fill"></i> เซิร์ฟเวอร์
+        </div>
+        <div class="sidebar-item">
+            <i class="bi bi-gear-fill"></i> ตั้งค่า
+        </div>
+        <div class="sidebar-item" style="margin-top:50px;color:#ff4444;">
+            <i class="bi bi-box-arrow-right"></i> ออกจากระบบ
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+        <div class="header">
+            <h1><i class="bi bi-activity"></i>Dashboard</h1>
+            <span class="badge" id="statusBadge">🔄 กำลังโหลด...</span>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number" id="statGuilds">0</div>
+                <div class="label">📁 เซิร์ฟเวอร์</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="statCommands">0</div>
+                <div class="label">📝 คำสั่งที่ใช้</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="statStatus">❌</div>
+                <div class="label">🟢 สถานะ</div>
+            </div>
+        </div>
+
+        <!-- Bot Card -->
+        <h3 style="margin-bottom:15px;color:#8899aa;font-size:15px;">
+            <i class="bi bi-robot" style="color:#9466ff;"></i> บอทของฉัน
+        </h3>
+        <div class="server-card" id="botCard">
+            <div class="top">
+                <span class="name"><i class="bi bi-robot"></i> <span id="botName">บอทหลัก</span></span>
+                <span class="status-badge" id="botStatusBadge">🔴 ออฟไลน์</span>
+            </div>
+            <div class="info">
+                <span><i class="bi bi-tag-fill"></i> <span id="botTag">ไม่ได้ออนไลน์</span></span>
+                <span><i class="bi bi-command"></i> <span id="botCommands">0</span></span>
+                <span><i class="bi bi-server"></i> <span id="botGuilds">0</span></span>
+            </div>
+            <div class="actions">
+                <button class="btn-start" id="btnStart" onclick="controlBot('start')">▶ เริ่มบอท</button>
+                <button class="btn-stop" id="btnStop" onclick="controlBot('stop')">⏹ หยุดบอท</button>
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="log-container" id="logContainer">
+            <div class="log-line"><span class="time">[ระบบ]</span> กำลังโหลด Dashboard...</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        let botStatus = {};
+
+        function addLog(msg) {
+            const container = document.getElementById('logContainer');
+            const time = new Date().toLocaleTimeString();
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.innerHTML = `<span class="time">[${time}]</span> ${msg}`;
+            container.appendChild(line);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        socket.on('botStatus', (data) => {
+            botStatus = data;
+            
+            document.getElementById('statGuilds').textContent = data.guilds || 0;
+            document.getElementById('statCommands').textContent = data.commands || 0;
+            document.getElementById('statStatus').textContent = data.running ? '✅' : '❌';
+            
+            document.getElementById('botTag').textContent = data.tag || 'ไม่ได้ออนไลน์';
+            document.getElementById('botCommands').textContent = data.commands || 0;
+            document.getElementById('botGuilds').textContent = data.guilds || 0;
+
+            const badge = document.getElementById('botStatusBadge');
+            if (data.running) {
+                badge.className = 'status-badge online';
+                badge.textContent = '🟢 ออนไลน์';
+                document.getElementById('statusBadge').className = 'badge online';
+                document.getElementById('statusBadge').textContent = `🟢 ออนไลน์ (${data.tag})`;
+            } else {
+                badge.className = 'status-badge offline';
+                badge.textContent = '🔴 ออฟไลน์';
+                document.getElementById('statusBadge').className = 'badge offline';
+                document.getElementById('statusBadge').textContent = '🔴 ออฟไลน์';
+            }
+        });
+
+        async function controlBot(action) {
+            const url = action === 'start' ? '/api/bot/start' : '/api/bot/stop';
+            const msg = action === 'start' ? '▶ กำลังเริ่มบอท...' : '⏹ กำลังหยุดบอท...';
+            addLog(`🔄 ${msg}`);
+            
+            try {
+                const res = await fetch(url, { method: 'POST' });
+                const data = await res.json();
+                addLog(`✅ ${action} บอท: ${data.status}`);
+            } catch (err) {
+                addLog(`❌ Error: ${err.message}`);
+            }
+        }
+
+        // โหลดสถานะครั้งแรก
+        fetch('/api/status')
+            .then(res => res.json())
+            .then(data => {
+                botStatus = data;
+                socket.emit('botStatus', data);
+                addLog('✅ โหลดสถานะสำเร็จ');
+            })
+            .catch(err => addLog(`❌ โหลดสถานะล้มเหลว: ${err.message}`));
+    </script>
+</body>
+</html>
